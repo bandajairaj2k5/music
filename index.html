@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="refresh" content="2;url=http://100.71.205.20:8081/">
+  <title>My Music</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #121212;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      background-color: #1e1e1e;
+      border: 1px solid #2d2d2d;
+      border-radius: 16px;
+      padding: 32px 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 16px;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .message {
+      font-size: 1rem;
+      line-height: 1.5;
+      color: #b3b3b3;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 14px 20px;
+      background-color: #1db954;
+      color: #000000;
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 9999px;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+    .btn:hover, .btn:focus {
+      background-color: #1ed760;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .help-text {
+      font-size: 0.85rem;
+      color: #777777;
+      margin-top: 20px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>My Music</h1>
+    <p class="message">Opening your music server. This only works while Tailscale is connected on this device.</p>
+    <a href="http://100.71.205.20:8081/" class="btn">Open My Music</a>
+    <p class="help-text">If nothing opens, turn on the Tailscale app and try again.</p>
+  </div>
+</body>
+</html>
