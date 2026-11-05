@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="refresh" content="2;url=http://100.71.205.20:8081/">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex">
   <title>My Music</title>
   <style>
     * {
@@ -42,6 +43,7 @@
       line-height: 1.5;
       color: #b3b3b3;
       margin-bottom: 24px;
+      word-break: break-word;
     }
     .btn {
       display: inline-block;
@@ -53,7 +55,10 @@
       font-size: 1rem;
       font-weight: 700;
       border-radius: 9999px;
+      border: none;
+      cursor: pointer;
       transition: background-color 0.2s ease, transform 0.1s ease;
+      margin-bottom: 20px;
     }
     .btn:hover, .btn:focus {
       background-color: #1ed760;
@@ -61,20 +66,108 @@
     .btn:active {
       transform: scale(0.98);
     }
-    .help-text {
-      font-size: 0.85rem;
-      color: #777777;
-      margin-top: 20px;
-      line-height: 1.4;
+    .secondary-link {
+      display: inline-block;
+      font-size: 0.9rem;
+      color: #888888;
+      text-decoration: none;
+      transition: color 0.2s ease;
+      margin-top: 8px;
+    }
+    .secondary-link:hover {
+      color: #ffffff;
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>My Music</h1>
-    <p class="message">Opening your music server. This only works while Tailscale is connected on this device.</p>
-    <a href="http://100.71.205.20:8081/" class="btn">Open My Music</a>
-    <p class="help-text">If nothing opens, turn on the Tailscale app and try again.</p>
+    <p id="status-message" class="message">Finding your music server...</p>
+    <button id="retry-btn" class="btn" style="display: none;">Retry</button>
+    <div>
+      <a href="http://100.71.205.20:8081/" class="secondary-link">Open over Tailscale</a>
+    </div>
   </div>
+
+  <script>
+    (function() {
+      const TUNNEL_REGEX = /^https:\/\/[a-z0-9-]{3,63}\.trycloudflare\.com\/?$/;
+      const statusEl = document.getElementById('status-message');
+      const retryBtn = document.getElementById('retry-btn');
+
+      function setStatus(msg) {
+        statusEl.textContent = msg;
+      }
+
+      function showRetry() {
+        retryBtn.style.display = 'inline-block';
+      }
+
+      function hideRetry() {
+        retryBtn.style.display = 'none';
+      }
+
+      async function resolveAndRedirect() {
+        hideRetry();
+
+        const hash = window.location.hash ? window.location.hash.substring(1).trim() : '';
+        if (!hash) {
+          setStatus('Open this page from your bookmark');
+          return;
+        }
+
+        setStatus('Finding your music server...');
+
+        const topicUrl = 'https://ntfy.sh/' + encodeURIComponent(hash) + '/json?poll=1&since=12h';
+
+        try {
+          const res = await fetch(topicUrl);
+          if (!res.ok) {
+            setStatus('Your music server looks offline. Try again in a minute.');
+            showRetry();
+            return;
+          }
+
+          const text = await res.text();
+          const lines = text.trim().split('\n');
+          let newestMsg = null;
+
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            try {
+              const data = JSON.parse(line);
+              if (data && data.event === 'message' && typeof data.message === 'string') {
+                newestMsg = data.message.trim();
+              }
+            } catch (e) {
+              // skip non-json line
+            }
+          }
+
+          if (!newestMsg) {
+            setStatus('Your music server looks offline. Try again in a minute.');
+            showRetry();
+            return;
+          }
+
+          if (TUNNEL_REGEX.test(newestMsg)) {
+            window.location.replace(newestMsg);
+          } else {
+            setStatus('Server link not found');
+          }
+        } catch (err) {
+          setStatus('Your music server looks offline. Try again in a minute.');
+          showRetry();
+        }
+      }
+
+      retryBtn.addEventListener('click', resolveAndRedirect);
+      window.addEventListener('hashchange', resolveAndRedirect);
+
+      resolveAndRedirect();
+    })();
+  </script>
 </body>
 </html>
