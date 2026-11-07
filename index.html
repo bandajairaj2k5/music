@@ -132,6 +132,7 @@
           const text = await res.text();
           const lines = text.trim().split('\n');
           let newestMsg = null;
+          let newestTime = 0;
 
           for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
@@ -140,6 +141,7 @@
               const data = JSON.parse(line);
               if (data && data.event === 'message' && typeof data.message === 'string') {
                 newestMsg = data.message.trim();
+                newestTime = Number(data.time) || 0;
               }
             } catch (e) {
               // skip non-json line
@@ -152,8 +154,32 @@
             return;
           }
 
+          // If the latest heartbeat is older than 60 minutes, server is likely offline
+          const nowSec = Math.floor(Date.now() / 1000);
+          if (newestTime > 0 && (nowSec - newestTime) > 3600) {
+            setStatus('Your music server looks offline. Try again in a minute.');
+            showRetry();
+            return;
+          }
+
           if (TUNNEL_REGEX.test(newestMsg)) {
-            window.location.replace(newestMsg);
+            setStatus('Connecting to your music server...');
+            try {
+              const probeTarget = newestMsg.replace(/\/$/, '') + '/healthz';
+              const controller = new AbortController();
+              const timeoutId = setTimeout(function() { controller.abort(); }, 3500);
+              const probeRes = await fetch(probeTarget, { signal: controller.signal });
+              clearTimeout(timeoutId);
+
+              if (probeRes.ok) {
+                window.location.replace(newestMsg);
+                return;
+              }
+            } catch (probeErr) {
+              // Tunnel down, DNS unresolvable, or probe timed out
+            }
+            setStatus('Your music server is reconnecting. Try again in a minute.');
+            showRetry();
           } else {
             setStatus('Server link not found');
           }
