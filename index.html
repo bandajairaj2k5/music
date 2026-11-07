@@ -108,6 +108,19 @@
         retryBtn.style.display = 'none';
       }
 
+      async function probeHealth(url, timeoutMs) {
+        try {
+          const probeTarget = url.replace(/\/$/, '') + '/healthz';
+          const controller = new AbortController();
+          const timeoutId = setTimeout(function() { controller.abort(); }, timeoutMs || 2000);
+          const probeRes = await fetch(probeTarget, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          return probeRes.ok;
+        } catch (e) {
+          return false;
+        }
+      }
+
       async function resolveAndRedirect() {
         hideRetry();
 
@@ -119,6 +132,21 @@
 
         setStatus('Finding your music server...');
 
+        // 1. Fast-path: probe last known working tunnel from localStorage
+        let cachedUrl = null;
+        try {
+          cachedUrl = localStorage.getItem('last_tunnel_url');
+        } catch (e) {}
+
+        if (cachedUrl && TUNNEL_REGEX.test(cachedUrl)) {
+          const isHealthy = await probeHealth(cachedUrl, 2000);
+          if (isHealthy) {
+            window.location.replace(cachedUrl);
+            return;
+          }
+        }
+
+        // 2. Fetch fresh tunnel from ntfy topic
         const topicUrl = 'https://ntfy.sh/' + encodeURIComponent(hash) + '/json?poll=1&since=12h';
 
         try {
@@ -164,19 +192,13 @@
 
           if (TUNNEL_REGEX.test(newestMsg)) {
             setStatus('Connecting to your music server...');
-            try {
-              const probeTarget = newestMsg.replace(/\/$/, '') + '/healthz';
-              const controller = new AbortController();
-              const timeoutId = setTimeout(function() { controller.abort(); }, 3500);
-              const probeRes = await fetch(probeTarget, { signal: controller.signal });
-              clearTimeout(timeoutId);
-
-              if (probeRes.ok) {
-                window.location.replace(newestMsg);
-                return;
-              }
-            } catch (probeErr) {
-              // Tunnel down, DNS unresolvable, or probe timed out
+            const isHealthy = await probeHealth(newestMsg, 3500);
+            if (isHealthy) {
+              try {
+                localStorage.setItem('last_tunnel_url', newestMsg);
+              } catch (e) {}
+              window.location.replace(newestMsg);
+              return;
             }
             setStatus('Your music server is reconnecting. Try again in a minute.');
             showRetry();
